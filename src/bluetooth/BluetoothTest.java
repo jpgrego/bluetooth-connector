@@ -92,8 +92,11 @@ public class BluetoothTest {
 			}
 		}
 
-		public void serviceSearchCompleted(int transID, int respCode) {			
-			System.out.printf("Service search is complete\n");
+		public void serviceSearchCompleted(int transID, int respCode) {		
+			// service search is complete
+			synchronized(serviceSearchCompletedEvent) {
+				serviceSearchCompletedEvent.notifyAll();
+			}
 		}
 
 		public void servicesDiscovered(int transID, ServiceRecord[] servRecord) {	
