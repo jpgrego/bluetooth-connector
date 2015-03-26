@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Scanner;
 import java.util.Vector;
 import javax.bluetooth.*;
+import javax.microedition.io.Connector;
+import javax.obex.*;
 
 /**
  * This program uses the BlueCove library to try to establish a bluetooth connection. 
@@ -46,7 +48,7 @@ public class BluetoothTest {
 		
 		if(devicesDiscovered.size() == 0) {
 			System.out.printf("No devices were found!\n");
-			System.exit(0);
+			return;
 		}
 		
 		System.out.printf("List of devices: \n");
@@ -70,6 +72,18 @@ public class BluetoothTest {
 		System.out.printf("List of services found on this device: \n");
 		
 		for(String s : servicesFound) System.out.printf("%s\n", s);
+		
+		// temporary
+		serverURL = "btgoep://B8F9348D57DF:6";
+		System.out.printf("Connecting to %s\n", serverURL);
+		ClientSession clientSession = (ClientSession) Connector.open(serverURL);
+		HeaderSet hsConnectReply = clientSession.connect(null);
+		
+		if(hsConnectReply.getResponseCode() != ResponseCodes.OBEX_HTTP_OK) {
+			System.out.printf("Failed to connect\n");
+		} else {
+			System.out.printf("Response code was %d", hsConnectReply.getResponseCode());
+		}
 		
 	}
 	
