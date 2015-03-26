@@ -25,8 +25,10 @@ public class BluetoothTest {
 	public static void main(String[] args) throws IOException, InterruptedException {
 		
 		int count = 1, indexChoice = -1;
+		int[] attrIDs = new int[] { 0x0100 };
 		String serverURL;
 		UUID serviceUUID = (args != null && args.length > 0) ? new UUID(args[0], false) : OBEX_FILE_TRANSFER;
+		UUID[] searchUUIDSet = new UUID[] { serviceUUID };
 		Scanner scanner = new Scanner(System.in);
 		
 		devicesDiscovered.clear();		
@@ -57,8 +59,11 @@ public class BluetoothTest {
 			System.out.println();
 		}
 		
-		serverURL = devicesDiscovered.get(indexChoice).getBluetoothAddress();
-		System.out.printf("This device's address is: %s. Exiting now...\n", serverURL);
+		LocalDevice.getLocalDevice().getDiscoveryAgent().searchServices(attrIDs, searchUUIDSet, devicesDiscovered.get(indexChoice), listener);
+		System.out.printf("Selected device: %s.\nList of services found on this device: \n", devicesDiscovered.get(indexChoice).getFriendlyName(false));
+		
+		for(String s : servicesFound) System.out.printf("%s\n", s);
+		
 		//devicesDiscovered.get(indexChoice).get;
 	}
 	
