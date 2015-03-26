@@ -55,7 +55,7 @@ public class BluetoothTest {
 		// crude input validation
 		while(indexChoice <= -1 || indexChoice > devicesDiscovered.size()) {
 			System.out.printf("Choose device: ");		
-			indexChoice = scanner.nextInt();
+			indexChoice = scanner.nextInt() - 1;
 			System.out.println();
 		}
 		
