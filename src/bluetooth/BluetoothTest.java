@@ -3,6 +3,7 @@ package bluetooth;
 import java.io.IOException;
 import java.util.Scanner;
 import java.util.Vector;
+
 import javax.bluetooth.*;
 import javax.microedition.io.Connector;
 import javax.obex.*;
