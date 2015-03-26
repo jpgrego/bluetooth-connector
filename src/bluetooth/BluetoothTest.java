@@ -3,6 +3,7 @@ package bluetooth;
 import java.io.IOException;
 import java.util.Scanner;
 import java.util.Vector;
+import java.util.logging.Logger;
 
 import javax.bluetooth.*;
 import javax.microedition.io.Connector;
@@ -17,6 +18,8 @@ import javax.obex.*;
  *
  */
 public class BluetoothTest {
+	
+	private static Logger myLog = Logger.getLogger(BluetoothTest.class.getName());
 	
 	static final UUID OBEX_FILE_TRANSFER = new UUID(0x1106);
 	
@@ -108,6 +111,28 @@ public class BluetoothTest {
 		}
 
 		public void serviceSearchCompleted(int transID, int respCode) {		
+			
+			switch(respCode) {
+				case DiscoveryListener.SERVICE_SEARCH_COMPLETED:
+					myLog.fine("Service search completed normally");
+					break;
+				case DiscoveryListener.SERVICE_SEARCH_TERMINATED:
+					myLog.fine("Service search was interrupted");
+					break;
+				case DiscoveryListener.SERVICE_SEARCH_ERROR:
+					myLog.warning("An error has occured while searching for services");
+					break;
+				case DiscoveryListener.SERVICE_SEARCH_DEVICE_NOT_REACHABLE:
+					myLog.warning("The device is not reachable");
+					break;
+				case DiscoveryListener.SERVICE_SEARCH_NO_RECORDS:
+					myLog.info("No records were found during the service search");
+					break;
+				default:
+					myLog.warning("Unknown error code during service search");
+					break;
+			}
+			
 			// service search is complete
 			synchronized(serviceSearchCompletedEvent) {
 				serviceSearchCompletedEvent.notifyAll();
