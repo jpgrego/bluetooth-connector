@@ -24,7 +24,8 @@ public class BluetoothTest {
 	
 	public static void main(String[] args) throws IOException, InterruptedException {
 		
-		int count = 1, indexChoice = 9999;
+		int count = 1, indexChoice = -1;
+		String serverURL;
 		UUID serviceUUID = (args != null && args.length > 0) ? new UUID(args[0], false) : OBEX_FILE_TRANSFER;
 		Scanner scanner = new Scanner(System.in);
 		
@@ -41,16 +42,23 @@ public class BluetoothTest {
 			}
 		}
 		
+		if(devicesDiscovered.size() == 0) {
+			System.out.printf("No devices were found!\n");
+			System.exit(0);
+		}
+		
 		System.out.printf("List of devices: \n");
 		for(RemoteDevice dev : devicesDiscovered) System.out.printf("%d) %s (%s)\n", count++, dev.getBluetoothAddress(), dev.getFriendlyName(false));
 		
 		// crude input validation
-		while(indexChoice >= 9999) {
+		while(indexChoice <= -1 || indexChoice > devicesDiscovered.size()) {
 			System.out.printf("Choose device: ");		
 			indexChoice = scanner.nextInt();
 			System.out.println();
 		}
 		
+		serverURL = devicesDiscovered.get(indexChoice).getBluetoothAddress();
+		System.out.printf("This device's address is: %s. Exiting now...\n", serverURL);
 		//devicesDiscovered.get(indexChoice).get;
 	}
 	
