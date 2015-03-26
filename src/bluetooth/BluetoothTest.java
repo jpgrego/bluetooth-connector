@@ -20,7 +20,7 @@ public class BluetoothTest {
 	// must be Vector because of possible concurrent access
 	public static final Vector<RemoteDevice> devicesDiscovered = new Vector<RemoteDevice>();
 	public static final Vector<String> servicesFound = new Vector<String>();		// getDiscoveryAgent().searchServices(...) allows association of services to a device
-	public static Object inquiryCompletedEvent = new Object();
+	public static Object inquiryCompletedEvent = new Object(), serviceSearchCompletedEvent = new Object();
 	
 	public static void main(String[] args) throws IOException, InterruptedException {
 		
@@ -59,12 +59,18 @@ public class BluetoothTest {
 			System.out.println();
 		}
 		
-		LocalDevice.getLocalDevice().getDiscoveryAgent().searchServices(attrIDs, searchUUIDSet, devicesDiscovered.get(indexChoice), listener);
-		System.out.printf("Selected device: %s.\nList of services found on this device: \n", devicesDiscovered.get(indexChoice).getFriendlyName(false));
+		System.out.printf("Selected device : %s\n", devicesDiscovered.get(indexChoice).getFriendlyName(false));
+		
+		synchronized(serviceSearchCompletedEvent) {
+			System.out.printf("Searching for services...");
+			LocalDevice.getLocalDevice().getDiscoveryAgent().searchServices(attrIDs, searchUUIDSet, devicesDiscovered.get(indexChoice), listener);
+			serviceSearchCompletedEvent.wait();
+			System.out.printf("done!\n");
+		}
+		System.out.printf("List of services found on this device: \n");
 		
 		for(String s : servicesFound) System.out.printf("%s\n", s);
 		
-		//devicesDiscovered.get(indexChoice).get;
 	}
 	
 	static DiscoveryListener listener = new DiscoveryListener() {
