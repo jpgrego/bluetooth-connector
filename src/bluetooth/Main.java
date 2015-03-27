@@ -50,7 +50,7 @@ public class Main {
 		nServices = btConnector.searchServicesFromDevice(btDevices[indexChoice]);
 		System.out.printf("%d services found\n", nServices);
 		deviceServices = btConnector.getServicesFromDevice(btDevices[indexChoice]);
-		for(String service : deviceServices) System.out.printf("%d) %s", count++, service);
+		for(String service : deviceServices) System.out.printf("%d) %s\n", count++, service);
 		
 		indexChoice = -1;
 		while(indexChoice <= -1 || indexChoice >= deviceServices.size()) {
