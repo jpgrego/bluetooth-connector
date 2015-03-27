@@ -46,13 +46,13 @@ public class Main {
 			System.out.printf("Searching what services are available for device %s...\n", btDevices[indexChoice].getBluetoothAddress());
 		}
 	
+		count = 1;
 		nServices = btConnector.searchServicesFromDevice(btDevices[indexChoice]);
 		System.out.printf("%d services found\n", nServices);
 		deviceServices = btConnector.getServicesFromDevice(btDevices[indexChoice]);
 		for(String service : deviceServices) System.out.printf("%d) %s", count++, service);
 		
 		indexChoice = -1;
-		count = 1;
 		while(indexChoice <= -1 || indexChoice >= deviceServices.size()) {
 			System.out.print("Choose service: ");
 			indexChoice = scanner.nextInt() - 1;
