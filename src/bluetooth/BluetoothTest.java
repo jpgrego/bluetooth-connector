@@ -1,6 +1,7 @@
 package bluetooth;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Scanner;
 import java.util.Vector;
 import java.util.logging.Logger;
@@ -21,7 +22,7 @@ public class BluetoothTest {
 	
 	private static Logger myLog = Logger.getLogger(BluetoothTest.class.getName());
 	
-	static final UUID OBEX_FILE_TRANSFER = new UUID(0x1106);
+	static final UUID OBEX_FILE_TRANSFER = new UUID(0x0003);
 	
 	// must be Vector because of possible concurrent access
 	public static final Vector<RemoteDevice> devicesDiscovered = new Vector<RemoteDevice>();
@@ -33,9 +34,8 @@ public class BluetoothTest {
 		int count = 1, indexChoice = -1;
 		int[] attrIDs = new int[] { 0x0100 };
 		String serverURL;
-		UUID serviceUUID = (args != null && args.length > 0) ? new UUID(args[0], false) : OBEX_FILE_TRANSFER;
-		UUID[] searchUUIDSet = new UUID[] { serviceUUID };
-		Scanner scanner = new Scanner(System.in);
+		UUID[] searchUUIDSet = new UUID[] { OBEX_FILE_TRANSFER };
+		Scanner scanner;
 		
 		devicesDiscovered.clear();		
 		servicesFound.clear();
@@ -58,36 +58,47 @@ public class BluetoothTest {
 		System.out.printf("List of devices: \n");
 		for(RemoteDevice dev : devicesDiscovered) System.out.printf("%d) %s (%s)\n", count++, dev.getBluetoothAddress(), dev.getFriendlyName(false));
 		
+		scanner = new Scanner(System.in);
 		// crude input validation
-		while(indexChoice <= -1 || indexChoice > devicesDiscovered.size()) {
+		while(indexChoice <= -1 || indexChoice >= devicesDiscovered.size()) {
 			System.out.printf("Choose device: ");		
 			indexChoice = scanner.nextInt() - 1;
-			System.out.println();
 		}
 		
+		scanner.close();
 		System.out.printf("Selected device : %s\n", devicesDiscovered.get(indexChoice).getFriendlyName(false));
 		
 		synchronized(serviceSearchCompletedEvent) {
-			System.out.printf("Searching for services...");
+			System.out.printf("Searching for services...\n");
 			LocalDevice.getLocalDevice().getDiscoveryAgent().searchServices(attrIDs, searchUUIDSet, devicesDiscovered.get(indexChoice), listener);
 			serviceSearchCompletedEvent.wait();
-			System.out.printf("done!\n");
 		}
 		System.out.printf("List of services found on this device: \n");
 		
 		for(String s : servicesFound) System.out.printf("%s\n", s);
 		
 		// temporary
-		serverURL = "btgoep://B8F9348D57DF:6";
+		serverURL = "btgoep://B8F9348D57DF:12";
 		System.out.printf("Connecting to %s\n", serverURL);
 		ClientSession clientSession = (ClientSession) Connector.open(serverURL);
 		HeaderSet hsConnectReply = clientSession.connect(null);
 		
 		if(hsConnectReply.getResponseCode() != ResponseCodes.OBEX_HTTP_OK) {
 			System.out.printf("Failed to connect\n");
-		} else {
-			System.out.printf("Response code was %d", hsConnectReply.getResponseCode());
-		}
+		} 
+
+		HeaderSet hsOperation = clientSession.createHeaderSet();
+		hsOperation.setHeader(HeaderSet.NAME, "Hello.txt");
+		hsOperation.setHeader(HeaderSet.TYPE, "text");
+		
+		Operation putOperation = clientSession.put(hsOperation);
+		byte[] msg = "Hello!".getBytes("iso-8859-1");
+		OutputStream os = putOperation.openOutputStream();
+		os.write(msg);
+		os.close();
+		putOperation.close();
+		clientSession.disconnect(null);
+		clientSession.close();
 		
 	}
 	
@@ -103,8 +114,24 @@ public class BluetoothTest {
 			}
 		} 
 		
-		public void inquiryCompleted(int discType) {
-			System.out.printf("Device search is complete\n");
+		public void inquiryCompleted(int respCode) {
+			
+			switch(respCode) {
+				case DiscoveryListener.INQUIRY_COMPLETED:
+					System.out.println("Device search is complete");
+					break;
+				case DiscoveryListener.INQUIRY_TERMINATED:
+					System.out.println("Device search was interrupted");
+					break;
+				case DiscoveryListener.INQUIRY_ERROR:
+					myLog.warning("An error has occured during device search");
+					break;
+				
+				default:
+					myLog.warning("Unknown error code while searching for devices");
+					break;
+			}
+			
 			synchronized(inquiryCompletedEvent) {
 				inquiryCompletedEvent.notifyAll();
 			}
@@ -114,20 +141,21 @@ public class BluetoothTest {
 			
 			switch(respCode) {
 				case DiscoveryListener.SERVICE_SEARCH_COMPLETED:
-					myLog.fine("Service search completed normally");
+					System.out.println("Service search is complete");
 					break;
 				case DiscoveryListener.SERVICE_SEARCH_TERMINATED:
-					myLog.fine("Service search was interrupted");
+					System.out.println("Service search was interrupted");
 					break;
 				case DiscoveryListener.SERVICE_SEARCH_ERROR:
-					myLog.warning("An error has occured while searching for services");
+					System.out.println("An error has occured while searching for services");
 					break;
 				case DiscoveryListener.SERVICE_SEARCH_DEVICE_NOT_REACHABLE:
 					myLog.warning("The device is not reachable");
 					break;
 				case DiscoveryListener.SERVICE_SEARCH_NO_RECORDS:
-					myLog.info("No records were found during the service search");
+					System.out.println("No records were found during the service search");
 					break;
+					
 				default:
 					myLog.warning("Unknown error code during service search");
 					break;
@@ -145,10 +173,11 @@ public class BluetoothTest {
 				url = servRecord[i].getConnectionURL(ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false); 
 				if(url != null) {
 					servicesFound.add(url);
-					DataElement serviceName = servRecord[i].getAttributeValue(0x0100);
 					
-					if(serviceName != null) System.out.printf("Service '%s' found", url);
-					else					System.out.printf("Service found", url);
+					// this was supposed to obtain the service's name but I couldn't get it to work correctly
+					//DataElement serviceName = servRecord[i].getAttributeValue(0x0100);
+					//if(serviceName != null) System.out.printf("Service '%s' found\n", url);
+					//else					System.out.printf("Service found\n", url);
 				}
 			}
 		}
