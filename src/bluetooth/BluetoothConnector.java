@@ -13,28 +13,56 @@ import javax.microedition.io.Connector;
 import javax.obex.*;
 
 /**
- * This program uses the BlueCove library to try to establish a bluetooth connection. 
- * Initially it searches for devices and registers the services that they provide. 
- * Afterwards, it asks the user which device he wishes to connect to.
- * Finally, it attempts to send a message with the newly established connection.
+ * This class was designed to provide the means to establish a bluetooth connection between two devices.
+ * This code was not extensively tested and most probably won't work 100%
  * @author jpgrego
  *
  */
 public class BluetoothConnector {
 	
 	private static Logger myLog = Logger.getLogger(BluetoothConnector.class.getName());
+	
+	/**
+	 * These are the set of UUID's that will be searched for
+	 */
 	private static final UUID[] searchUUIDSet = new UUID[]{new UUID(0x0003)};		// 0x0003 = RFCOMM UUID
-	private static int[] attrIDSet = new int[]{0x0003};								// attribute ID to obtain serviceID
+	
+	/**
+	 * These are the attributes of the services we wish to obtain
+	 */
+	private static int[] attrIDSet = new int[]{0x0003};								// 0x0003 = attribute ID to obtain serviceID
 
+	/**
+	 * Map containing the devices detected, and the respective services
+	 */
 	private Map<RemoteDevice, List<String>> devicesAndServices;
+	
+	/**
+	 * Locks
+	 */
 	private Object inquiryCompleteLock, serviceSearchCompleteLock;
 	
+	/**
+	 * Variable of the session established with a remote device
+	 */
+	private ClientSession clientSession;
+	
+	
+	/**
+	 * Constructor of the BluetoothConnector class
+	 */
 	public BluetoothConnector() {
 		devicesAndServices = new HashMap<RemoteDevice, List<String>>();
 		inquiryCompleteLock = new Object();
 		serviceSearchCompleteLock = new Object();
 	}
 	
+	/**
+	 * This method initiates the scan for discoverable devices in the area and adds them to the devicesAndServices map
+	 * @return the number of discoverable devices detected
+	 * @throws BluetoothStateException thrown when a request is made to a Bluetooth device that cannot be supported in the current state
+	 * @throws InterruptedException thrown when the thread was interrupted
+	 */
 	public int searchDevices() throws BluetoothStateException, InterruptedException {
 		
 		int size;
@@ -50,10 +78,22 @@ public class BluetoothConnector {
 		return size;
 	}
 	
+	/**
+	 * Initiates the scan of all the services available from all the devices that exist in the devicesAndServices map
+	 * @throws BluetoothStateException
+	 * @throws InterruptedException
+	 */
 	public void searchServices() throws BluetoothStateException,InterruptedException {
 		for(RemoteDevice device : devicesAndServices.keySet()) searchServicesFromDevice(device);
 	}
 	
+	/**
+	 * Scans for all services that a specific device provides
+	 * @param device the device to be scanned for services
+	 * @return the number of services found
+	 * @throws BluetoothStateException thrown when a request is made to a Bluetooth device that cannot be supported in the current state
+	 * @throws InterruptedException thrown when the thread was interrupted
+	 */
 	public int searchServicesFromDevice(RemoteDevice device) throws BluetoothStateException,InterruptedException {
 		synchronized(serviceSearchCompleteLock) {
 			LocalDevice.getLocalDevice().getDiscoveryAgent().searchServices(attrIDSet, searchUUIDSet, device, listener);
@@ -63,12 +103,34 @@ public class BluetoothConnector {
 		return devicesAndServices.get(device).size();
 	}
 	
-	public boolean sendTestMessage(String url) throws IOException {
-		//serverURL = "btgoep://B8F9348D57DF:12";
-		ClientSession clientSession = (ClientSession) Connector.open(url);
+	/**
+	 * Attempts to establish a connection to a provided URL
+	 * @param url URL to the Bluetooth service
+	 * @return boolean value, true if connection was successfully established, false otherwise
+	 * @throws IOException thrown when the thread was interrupted
+	 */
+	public boolean connect(String url) throws IOException {
+		clientSession = (ClientSession) Connector.open(url);
 		HeaderSet hsConnectReply = clientSession.connect(null);
-		
 		if(hsConnectReply.getResponseCode() != ResponseCodes.OBEX_HTTP_OK) return false;
+		return true;
+	}
+	
+	/**
+	 * Closes the established connection
+	 * @throws IOException thrown when closing the connection failed for some reason
+	 */
+	public void disconnect() throws IOException {
+		clientSession.disconnect(null);
+		clientSession.close();
+	}
+	
+	/**
+	 * Test method that attempts to send a message through the established connection
+	 * @throws IOException thrown when sending the message failed for some reason
+	 */
+	public void sendTestMessage() throws IOException {
+		assert clientSession != null;
 		
 		HeaderSet hsOperation = clientSession.createHeaderSet();
 		hsOperation.setHeader(HeaderSet.NAME, "Hello.txt");
@@ -82,17 +144,28 @@ public class BluetoothConnector {
 		putOperation.close();
 		clientSession.disconnect(null);
 		clientSession.close();
-		return true;
 	}
 	
+	/**
+	 * Obtain the devices that were detected
+	 * @return array composed of RemoteDevice objects, the devices that were detected
+	 */
 	public RemoteDevice[] getDevicesArray() {
 		return devicesAndServices.keySet().toArray(new RemoteDevice[devicesAndServices.size()]);
 	}
 	
+	/**
+	 * Obtain a list of the services provided by a device (it doesn't scan, just retrieves the services that were already scanned)
+	 * @param device device whose services are to be retrieved
+	 * @return List of strings representing the services that a Bluetooth device provides
+	 */
 	public List<String> getServicesFromDevice(RemoteDevice device) {
 		return devicesAndServices.get(device);
 	}
 	
+	/**
+	 * Implementation of DiscoveryListener, providing device and service scanning
+	 */
 	private DiscoveryListener listener = new DiscoveryListener() {
 		public void deviceDiscovered(RemoteDevice btDevice, DeviceClass cod) {
 			if(!devicesAndServices.containsKey(btDevice)) {

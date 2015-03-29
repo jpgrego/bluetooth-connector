@@ -13,6 +13,7 @@ public class Main {
 		Scanner scanner;
 		RemoteDevice[] btDevices;
 		List<String> deviceServices;
+		String chosenService;
 		
 		System.out.print("Searching for devices...\n");
 		
@@ -59,7 +60,23 @@ public class Main {
 		}
 		scanner.close();
 		
+		chosenService = deviceServices.get(indexChoice);
+		System.out.printf("Connecting to service %s\n", chosenService);
+		if(btConnector.connect(chosenService)) {
+			System.out.print("Connected!\n");
+		} else {
+			System.out.print("Failed connecting to the chosen service\n");
+			System.exit(1);
+		}
+		
 		System.out.print("Sending test message through OBEX...\n");
-		btConnector.sendTestMessage(deviceServices.get(indexChoice));
+		try {
+			btConnector.sendTestMessage();
+			System.out.print("Test message was sent successfully\n");
+		} catch(IOException failedSendingMsg) {
+			System.out.print("An error has occured sending the test message\n");
+		}
+		
+		System.out.print("Exiting...\n");
 	}
 }
